@@ -33,7 +33,55 @@ class User {
         // préparation de la requête d'insertion
         $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->connection->prepare($query);
-        
+        $stmt->bind_param("sssss", $login, $hashedPassword, $email, $firstname, $lastname);
 
+        if ($stmt->execute()) {
+            // récupération de l'ID du nouvel utilisateur
+             $newId = $this->connection->insert_id;
+
+             // Récupération des informations complètes de l'utilisateur
+            $selectQuery = "SELECT * FROM utilisateurs WHERE id = ?";
+            $selectStmt = $this->connection->prepare($selectQuery);
+            $selectStmt->bind_param("i", $newId);
+            $selectStmt->execute();
+            $result = $selectStmt->get_result();
+
+            if ($user = $result->fetch_assoc()) {
+                return $user;
+            }
+        }
+        return false;
+    }
+
+    public function connect($login, $password) {
+        $query = "SELECT * FROM utilisateurs WHERE login = ?";
+        $stmt = $this->connection->prepare($query);
+        $stmt ->bind_param("s", $login);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+         if ($user = $result->fetch_assoc()) {
+            // Vérification du mot de passe
+            if (password_verify($password, $user['password'])) {
+                // Attribution des valeurs aux attributs de la classe
+                $this->id = $user['id'];
+                $this->login = $user['login'];
+                $this->email = $user['email'];
+                $this->firstname = $user['firstname'];
+                $this->lastname = $user['lastname'];
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function disconnect() {
+        // Réinitialisation des attributs
+        $this->id = null;
+        $this->login = "";
+        $this->email = "";
+        $this->firstname = "";
+        $this->lastname = "";
     }
 }
