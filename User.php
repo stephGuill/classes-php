@@ -101,5 +101,66 @@ class User {
         return false;
     }
 
+    public function update($login, $password, $email,$firstname, $lastname) {
+        if ($this->isConnected()) {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $query = "UPDATE utilisateurs SET login = ?, password = ?, email = ?, firstname = ?, lastname = ? WHERE id = ?";
+            $stmt = $this->connection->prepare($query);
+            $stmt->bind_param("sssssi", $login, $hashedPassword, $email, $firstname, $lastname, $this->id);
+
+            if ($stmt->execute()) {
+                // mise à jour des attributs de l'objet
+                $this->login = $login;
+                $this->email =$email;
+                $this->firstname =$firstname;
+                $this->lastname = $lastname;
+                return true;
+            }
+        }
+
+        return false;     
+    }
+
+    public function isConnected() {
+        return $this->id !== null;
+    }
+
+    public function getAllInfos() {
+        if ($this->isConnected()) {
+            return [
+              'id' => $this->id,
+                'login' => $this->login,
+                'email' => $this->email,
+                'firstname' => $this->firstname,
+                'lastname' => $this->lastname
+            ];    
+        }
+
+        return null;
+    }
+
+    public function getLogin() {
+        return $this->login;
+    }
+
+    public function getEmail() {
+        return $this->email;
+    }
+
+     public function getFirstname() {
+        return $this->firstname;
+    }
     
+    public function getLastname() {
+        return $this->lastname;
+    }
+
+    // destruction pour fermer la session
+    public function __destruct() {
+        if ($this->connection) {
+            $this->connection->close();
+        }
+    }
 }
+
+// exemple de test des méthodes
