@@ -84,4 +84,22 @@ class User {
         $this->firstname = "";
         $this->lastname = "";
     }
+
+    public function delete() {
+        if ($this->isConnected()) {
+            $query = "DELETE FROM utilisateurs WHERE id = ?";
+            $stmt = $this->connection->prepare($query);
+            $stmt->bind_param("i", $this->id);
+
+            if ($stmt->execute()) {
+                // déconnexion après suppression
+                $this->disconnect();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    
 }
