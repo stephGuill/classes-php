@@ -164,3 +164,22 @@ class User {
 }
 
 // exemple de test des méthodes
+
+$user = new User();
+
+// test d'enregistrement
+$newUser = $user->register("Tom13", "azerty", "thomas@gmail.com", "Thomas", "DUPONT");
+if ($newUser) {
+    echo "Utilisateur crée avec succès !\n";
+    print_r($newUser);  
+}
+
+// test de connexion
+$user2 = new User();
+if ($user2->connect("Tom13", "azerty")) {
+    echo "Connexion réussie !\n";
+    echo "Informations utilisateur : \n";
+    print_r($user2->getAllInfos());
+}
+
+?>
