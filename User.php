@@ -30,9 +30,25 @@ class User {
         // hachage du mot de passe pour la sécurité
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
+        // Vérifier si le login ou l'email existe déjà pour éviter l'erreur de clé dupliquée
+        $checkQuery = "SELECT id FROM utilisateurs WHERE login = ? OR email = ? LIMIT 1";
+        $checkStmt = $this->connection->prepare($checkQuery);
+        if ($checkStmt) {
+            $checkStmt->bind_param("ss", $login, $email);
+            $checkStmt->execute();
+            $checkResult = $checkStmt->get_result();
+            if ($checkResult && $checkResult->fetch_assoc()) {
+                // login ou email déjà utilisé
+                return false;
+            }
+        }
+
         // préparation de la requête d'insertion
         $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->connection->prepare($query);
+        if (!$stmt) {
+            return false;
+        }
         $stmt->bind_param("sssss", $login, $hashedPassword, $email, $firstname, $lastname);
 
         if ($stmt->execute()) {

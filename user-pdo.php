@@ -31,8 +31,8 @@ class Userpdo {
             //  hachage du mot de passe pour la sécurité
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-            //  préparationde la requête d'insertion
-            $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (:login, :password, :email, :firstname, :lastname";
+            //  préparation de la requête d'insertion
+            $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (:login, :password, :email, :firstname, :lastname)";
             $stmt = $this->pdo->prepare($query);
             
             // execution avec les paramètres
@@ -79,21 +79,12 @@ class Userpdo {
                 $this->lastname = $user['lastname'];
                 return true;
         }
-    } catch (PDOException $e) {
-      echo "Erreur lors de la connexion : " . $e->getMessage()  
-    }
+        } catch (PDOException $e) {
+            echo "Erreur lors de la connexion : " . $e->getMessage();
+        }
 
-    return false;
-}
-    public function disconnect() {
-        // Réinitialisation des attributs
-        $this->id = null;
-        $this->login = "";
-        $this->email = "";
-        $this->firstname = "";
-        $this->lastname = "";
+        return false;
     }
-
     public function disconnect() {
         // Réinitialisation des attributs
         $this->id = null;
