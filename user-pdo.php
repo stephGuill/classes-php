@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Classe Userpdo
+ * Variante de la classe User utilisant PDO au lieu de mysqli.
+ * PDO offre une API orientée objet, la possibilité de lier des paramètres
+ * nommés et une gestion centralisée des erreurs via les exceptions.
+ */
 class Userpdo {
     private $id;
     public $login;
@@ -7,21 +13,24 @@ class Userpdo {
     public $firstname;
     public $lastname;
 
+    // Instance PDO utilisée pour les requêtes
     private $pdo;
 
     public function __construct() {
         try {
-            // connexion à la base de données avec pdo
+            // Création de l'objet PDO (DSN, utilisateur, mot de passe)
             $this->pdo = new PDO("mysql:host=localhost;dbname=classes", "root", "");
+            // Lever les exceptions en cas d'erreur pour pouvoir les attraper
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            // initialisation des attributs
+            // Initialisation des attributs
             $this->id = null;
             $this->login = "";
             $this->email = "";
             $this->firstname = "";
             $this->lastname = "";
         } catch (PDOException $e) {
+            // En cas d'échec de connexion, arrêter et afficher l'erreur
             die("Connection failed: " . $e->getMessage());    
         }
     }
@@ -30,12 +39,12 @@ class Userpdo {
         try {
             //  hachage du mot de passe pour la sécurité
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-            //  préparation de la requête d'insertion
+            // Préparation de la requête d'insertion (requête préparée avec paramètres nommés)
+            // Les placeholders nommés (:login, :password, ...) améliorent la lisibilité
             $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (:login, :password, :email, :firstname, :lastname)";
             $stmt = $this->pdo->prepare($query);
-            
-            // execution avec les paramètres
+
+            // Exécution avec un tableau associatif liant les paramètres nommés
             $result = $stmt->execute([
                 ':login' => $login,
                 ':password' => $hashedPassword,
@@ -45,10 +54,9 @@ class Userpdo {
             ]);
 
             if ($result) {
-                // récupération de l'ID du nouvel utilisateur
+                // Récupérer l'ID inséré (lastInsertId) et renvoyer les infos complètes
                 $newId = $this->pdo->lastInsertId();
 
-                // récupération des informations complètes de l'utilisateur
                 $selectQuery = "SELECT * FROM utilisateurs WHERE id = :id";
                 $selectStmt = $this->pdo->prepare($selectQuery);
                 $selectStmt->execute([':id' => $newId]);
@@ -139,17 +147,19 @@ class Userpdo {
                     $this->lastname = $lastname;
                     return true;
                 }
-} catch (PDOException $e) {
-    echo "Erreur lors de la mise à jour : " . $e->getMessage();
-}
+            } catch (PDOException $e) {
+                // En cas d'erreur SQL, afficher un message utile (en dev)
+                echo "Erreur lors de la mise à jour : " . $e->getMessage();
+            }
 
-}
+        }
 
-    return false;
-}
+        return false;
+    }
 
 public function isConnected() {
-        return $this->id !== null;
+    // Retourne true si l'objet représente un utilisateur connecté
+    return $this->id !== null;
     }
 
     public function getAllInfos() {
@@ -167,6 +177,7 @@ public function isConnected() {
     }
 
      public function getLogin() {
+        // Accesseurs simples pour exposer les attributs
         return $this->login;
     }
     
@@ -187,19 +198,19 @@ public function isConnected() {
 /*
 $user = new Userpdo();
 
-// Test d'enregistrement
-$newUser = $user->register("Alice25", "motdepasse", "alice@example.com", "Alice", "MARTIN");
-if ($newUser) {
-    echo "Utilisateur créé avec succès !\n";
-    print_r($newUser);
-}
+// Test d'enregistrement (décommenter pour exécuter manuellement)
+// $newUser = $user->register("Alice25", "motdepasse", "alice@example.com", "Alice", "MARTIN");
+// if ($newUser) {
+//     echo "Utilisateur créé avec succès !\n";
+//     print_r($newUser);
+// }
 
 // Test de connexion
-$user2 = new Userpdo();
-if ($user2->connect("Alice25", "motdepasse")) {
-    echo "Connexion réussie !\n";
-    echo "Informations utilisateur : \n";
-    print_r($user2->getAllInfos());
-}
+// $user2 = new Userpdo();
+// if ($user2->connect("Alice25", "motdepasse")) {
+//     echo "Connexion réussie !\n";
+//     echo "Informations utilisateur : \n";
+//     print_r($user2->getAllInfos());
+// }
 */
 ?>

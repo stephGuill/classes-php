@@ -1,28 +1,36 @@
 <?php
 
+// Script de test qui exécute une série de checks sur les deux classes User et Userpdo
+// Affiche le résultat de chaque étape via des echo pour pouvoir exécuter ce fichier en CLI
+
 echo "=== Test des classes User ===\n\n";
 
 // Test de la classe User (MySQLi)
 echo "--- Test de la classe User (MySQLi) ---\n";
 require_once 'User.php';
 
+// Instanciation de la classe User
 $user = new User();
 
-// Test d'enregistrement
+// Test d'enregistrement (register)
+// register retourne soit un tableau (informations utilisateur) soit false
 echo "1. Test d'enregistrement ...\n";
 $newUser = $user->register("Tom13", "azerty", "thomas@gmail.com", "Thomas", "DUPONT");
 if ($newUser) {
      echo "✓ Utilisateur créé avec succès !\n";
     echo "ID: " . $newUser['id'] . ", Login: " . $newUser['login'] . "\n\n";
 } else {
+    // Ici on peut avoir false pour différentes raisons : login existant, erreur SQL, etc.
     echo "✗ Erreur lors de la création\n\n";
 }
 
-// Test de connexion
+// Test de connexion (connect)
+// connect retourne true si les identifiants sont valides et remplit l'objet
 echo "2. Test de connexion...\n";
 $user2 = new User();
 if ($user2->connect("Tom13", "azerty")) {
     echo "✓ Connexion réussie !\n";
+    // getLogin/getEmail sont des getters simples qui renvoient les attributs
     echo "Login connecté: " . $user2->getLogin() . "\n";
     echo "Email: " . $user2->getEmail() . "\n";
     echo "Prénom: " . $user2->getFirstname() . "\n";
@@ -30,11 +38,12 @@ if ($user2->connect("Tom13", "azerty")) {
 } else {
     echo "✗ Erreur de connexion\n\n";
 }
-// Test isConnected
+
+// Test isConnected (conditionnelle)
 echo "3. Test isConnected...\n";
 echo $user2->isConnected() ? "✓ Utilisateur connecté\n\n" : "✗ Utilisateur non connecté\n\n";
 
-// Test getAllInfos
+// Test getAllInfos (renvoie tableau associatif si connecté)
 echo "4. Test getAllInfos...\n";
 $infos = $user2->getAllInfos();
 if ($infos) {
@@ -43,7 +52,7 @@ if ($infos) {
     echo "\n";
 }
 
-// Test update
+// Test update (met à jour l'utilisateur connecté)
 echo "5. Test de mise à jour...\n";
 if ($user2->update("Tom13_updated", "newpassword", "thomas.updated@gmail.com", "Thomas", "DUPONT-MARTIN")) {
     echo "✓ Mise à jour réussie !\n";
@@ -59,6 +68,7 @@ echo "=== Fin des tests User (MySQLi) ===\n\n";
 echo "--- Test de la classe Userpdo (PDO) ---\n";
 require_once 'user-pdo.php';
 
+// Instanciation de la classe PDO
 $userPdo = new Userpdo();
 
 //  Test d'enregistrement

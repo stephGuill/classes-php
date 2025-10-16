@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Classe User
+ * Représente un utilisateur et fournit des méthodes pour s'inscrire,
+ * se connecter, mettre à jour, supprimer et obtenir des informations.
+ * Utilise l'extension mysqli pour communiquer avec la base de données MySQL.
+ */
 class User {
     private $id;
     public $login;
@@ -10,15 +16,17 @@ class User {
     private $connection;
 
     public function __construct() {
-        // connexion à la base de données mySQL
+        // connexion à la base de données MySQL via mysqli
+        // (hôte, utilisateur, mot de passe, base)
         $this->connection = new mysqli("localhost", "root", "", "classes");
 
-        // vérifie la connexion
+        // Si la connexion échoue, on stoppe l'exécution et affiche l'erreur
         if ($this->connection->connect_error) {
             die("Connection failed: " . $this->connection->connect_error);
         }
 
-        // initialisation des attributs
+        // Initialisation des attributs de l'objet
+        // Avant connexion ils sont vides / null
         $this->id = null;
         $this->login = "";
         $this->email = "";
@@ -27,35 +35,41 @@ class User {
     }
 
     public function register($login, $password, $email, $firstname, $lastname) {
-        // hachage du mot de passe pour la sécurité
+        // Hachage du mot de passe avec password_hash (algorithme bcrypt par défaut)
+        // pour ne jamais stocker le mot de passe en clair.
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // Vérifier si le login ou l'email existe déjà pour éviter l'erreur de clé dupliquée
+        // Vérifier si le login ou l'email existe déjà pour éviter l'erreur de clé dupliquée.
+        // On utilise une requête préparée pour éviter les injections SQL.
         $checkQuery = "SELECT id FROM utilisateurs WHERE login = ? OR email = ? LIMIT 1";
         $checkStmt = $this->connection->prepare($checkQuery);
         if ($checkStmt) {
+            // bind_param: 'ss' signifie deux paramètres de type string
             $checkStmt->bind_param("ss", $login, $email);
             $checkStmt->execute();
             $checkResult = $checkStmt->get_result();
+            // Si la requête retourne une ligne, le login ou l'email existe déjà
             if ($checkResult && $checkResult->fetch_assoc()) {
-                // login ou email déjà utilisé
-                return false;
+                return false; // signaler l'échec (login/email déjà utilisé)
             }
         }
 
-        // préparation de la requête d'insertion
+        // Préparation de la requête d'insertion (requête préparée pour la sécurité)
         $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->connection->prepare($query);
         if (!$stmt) {
+            // Échec de préparation de la requête (problème SQL)
             return false;
         }
+        // On attache les paramètres (5 strings)
         $stmt->bind_param("sssss", $login, $hashedPassword, $email, $firstname, $lastname);
 
+        // Exécution de l'INSERT. Si succès, on récupère l'ID inséré puis on retourne
+        // les informations complètes de l'utilisateur nouvellement créé.
         if ($stmt->execute()) {
-            // récupération de l'ID du nouvel utilisateur
-             $newId = $this->connection->insert_id;
+            $newId = $this->connection->insert_id;
 
-             // Récupération des informations complètes de l'utilisateur
+            // Récupération des informations pour renvoyer un tableau associatif
             $selectQuery = "SELECT * FROM utilisateurs WHERE id = ?";
             $selectStmt = $this->connection->prepare($selectQuery);
             $selectStmt->bind_param("i", $newId);
@@ -63,37 +77,44 @@ class User {
             $result = $selectStmt->get_result();
 
             if ($user = $result->fetch_assoc()) {
+                // Retourner les informations utilisateur (id, login, email, ...)
                 return $user;
             }
         }
+
+        // Retour par défaut en cas d'échec
         return false;
     }
 
     public function connect($login, $password) {
+        // Récupérer l'utilisateur par login
         $query = "SELECT * FROM utilisateurs WHERE login = ?";
         $stmt = $this->connection->prepare($query);
         $stmt ->bind_param("s", $login);
         $stmt->execute();
         $result = $stmt->get_result();
 
+        // Si un utilisateur est trouvé, vérifier le mot de passe haché
          if ($user = $result->fetch_assoc()) {
-            // Vérification du mot de passe
+            // password_verify compare le mot de passe fourni avec le hash stocké
             if (password_verify($password, $user['password'])) {
-                // Attribution des valeurs aux attributs de la classe
+                // Si la vérification réussit, on remplit les attributs de l'objet
+                // pour marquer l'utilisateur comme connecté
                 $this->id = $user['id'];
                 $this->login = $user['login'];
                 $this->email = $user['email'];
                 $this->firstname = $user['firstname'];
                 $this->lastname = $user['lastname'];
-                return true;
+                return true; // connexion réussie
             }
         }
 
+        // connexion échouée
         return false;
     }
 
     public function disconnect() {
-        // Réinitialisation des attributs
+        // Réinitialisation des attributs pour marquer l'utilisateur comme déconnecté
         $this->id = null;
         $this->login = "";
         $this->email = "";
@@ -102,13 +123,14 @@ class User {
     }
 
     public function delete() {
+        // Supprimer l'utilisateur connecté
         if ($this->isConnected()) {
             $query = "DELETE FROM utilisateurs WHERE id = ?";
             $stmt = $this->connection->prepare($query);
             $stmt->bind_param("i", $this->id);
 
             if ($stmt->execute()) {
-                // déconnexion après suppression
+                // Après suppression, on déconnecte l'objet
                 $this->disconnect();
                 return true;
             }
@@ -118,9 +140,13 @@ class User {
     }
 
     public function update($login, $password, $email,$firstname, $lastname) {
+        // Mettre à jour les informations de l'utilisateur connecté
         if ($this->isConnected()) {
+            // Hachage du nouveau mot de passe
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
             // Vérifier si un autre utilisateur utilise déjà ce login ou cet email
+            // Exclure l'utilisateur courant (id != current id)
             $checkQuery = "SELECT id FROM utilisateurs WHERE (login = ? OR email = ?) AND id != ? LIMIT 1";
             $checkStmt = $this->connection->prepare($checkQuery);
             if ($checkStmt) {
@@ -129,10 +155,11 @@ class User {
                 $checkResult = $checkStmt->get_result();
                 if ($checkResult && $checkResult->fetch_assoc()) {
                     // login ou email déjà utilisé par un autre utilisateur
-                    return false;
+                    return false; // éviter la violation de contrainte UNIQUE
                 }
             }
 
+            // Préparer et exécuter la requête UPDATE
             $query = "UPDATE utilisateurs SET login = ?, password = ?, email = ?, firstname = ?, lastname = ? WHERE id = ?";
             $stmt = $this->connection->prepare($query);
             if (!$stmt) {
@@ -141,7 +168,7 @@ class User {
             $stmt->bind_param("sssssi", $login, $hashedPassword, $email, $firstname, $lastname, $this->id);
 
             if ($stmt->execute()) {
-                // mise à jour des attributs de l'objet
+                // Mise à jour des attributs locaux de l'objet pour refléter la base
                 $this->login = $login;
                 $this->email = $email;
                 $this->firstname = $firstname;
@@ -197,16 +224,18 @@ class User {
 
 // exemple de test des méthodes
 
+// Exemple d'utilisation / tests rapides
 $user = new User();
 
-// test d'enregistrement
+// Test d'enregistrement: register() retourne soit un tableau associatif
+// (informations de l'utilisateur créé) soit false en cas d'échec.
 $newUser = $user->register("Tom13", "azerty", "thomas@gmail.com", "Thomas", "DUPONT");
 if ($newUser) {
     echo "Utilisateur crée avec succès !\n";
-    print_r($newUser);  
+    print_r($newUser);
 }
 
-// test de connexion
+// Test de connexion: on crée un nouvel objet User pour simuler une nouvelle session
 $user2 = new User();
 if ($user2->connect("Tom13", "azerty")) {
     echo "Connexion réussie !\n";
