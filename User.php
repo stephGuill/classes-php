@@ -120,15 +120,31 @@ class User {
     public function update($login, $password, $email,$firstname, $lastname) {
         if ($this->isConnected()) {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            // Vérifier si un autre utilisateur utilise déjà ce login ou cet email
+            $checkQuery = "SELECT id FROM utilisateurs WHERE (login = ? OR email = ?) AND id != ? LIMIT 1";
+            $checkStmt = $this->connection->prepare($checkQuery);
+            if ($checkStmt) {
+                $checkStmt->bind_param("ssi", $login, $email, $this->id);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                if ($checkResult && $checkResult->fetch_assoc()) {
+                    // login ou email déjà utilisé par un autre utilisateur
+                    return false;
+                }
+            }
+
             $query = "UPDATE utilisateurs SET login = ?, password = ?, email = ?, firstname = ?, lastname = ? WHERE id = ?";
             $stmt = $this->connection->prepare($query);
+            if (!$stmt) {
+                return false;
+            }
             $stmt->bind_param("sssssi", $login, $hashedPassword, $email, $firstname, $lastname, $this->id);
 
             if ($stmt->execute()) {
                 // mise à jour des attributs de l'objet
                 $this->login = $login;
-                $this->email =$email;
-                $this->firstname =$firstname;
+                $this->email = $email;
+                $this->firstname = $firstname;
                 $this->lastname = $lastname;
                 return true;
             }

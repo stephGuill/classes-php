@@ -73,7 +73,7 @@ if ($newUserPdo) {
 
 //  Test de connexion
 echo "2. Test de connexion...\n";
-$userPdo = new Userpdo();
+$userPdo2 = new Userpdo();
 if ($userPdo2->connect("Alice25", "motdepasse")) {
     echo "✓ Connexion réussie !\n";
     echo "Login connecté: " . $userPdo2->getLogin() . "\n";
@@ -96,3 +96,19 @@ if ($infosPdo) {
     print_r($infosPdo);
     echo "\n";
 }
+
+// Test update
+echo "5. Test de mise à jour...\n";
+if ($userPdo2->update("Alice25_updated", "newpassword", "alice.updated@example.com", "Alice", "MARTIN-BERNARD")) {
+    echo "✓ Mise à jour réussie !\n";
+    echo "Nouveau login: " . $userPdo2->getLogin() . "\n";
+    echo "Nouvel email: " . $userPdo2->getEmail() . "\n\n";
+} else {
+    echo "✗ Erreur lors de la mise à jour\n\n";
+}
+
+echo "=== Fin des tests Userpdo (PDO) ===\n\n";
+
+echo "=== Tests terminés ===\n";
+
+?>
